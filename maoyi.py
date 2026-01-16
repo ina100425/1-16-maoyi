@@ -81,17 +81,21 @@ try:
         ['섬유산업수출증감(전년대비_퍼센트)', '섬유산업수입증감(전년대비_퍼센트)', None],
         ["M$", "M$", "M$"]
     ):
+        # 기존의 st.markdown 내부 화살표 로직 수정
         with col:
             val = latest_data[val_key]
             delta = latest_data[delta_key] if delta_key else None
             color = "#FF4B4B" if delta and delta > 0 else "#1C83E1"
+            
+            # 화살표 결정 로직: delta가 0보다 크면 ▲, 아니면 ▼
+            arrow = "▲" if delta and delta > 0 else "▼"
             
             st.markdown(f"""
                 <div class="main-card">
                     <div class="card-title">{title}</div>
                     <div class="card-value">{val:,.0f} {unit}</div>
                     <div class="card-delta" style="color: {color if delta else '#666'};">
-                        {("▲ " + str(abs(delta)) + "%") if delta else ("비중: " + str(latest_data['섬유산업수출비중(전년대비_퍼센트)']) + "%")}
+                        { (arrow + " " + str(abs(delta)) + "% (전년비)") if delta is not None else ("비중: " + str(latest_data['섬유산업수출비중(전년대비_퍼센트)']) + "%") }
                     </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -119,7 +123,7 @@ try:
         st.subheader("📊 전체 산업 vs 섬유산업 수출 규모 비교")
         fig2, ax2 = plt.subplots(figsize=(12, 5))
         sns.lineplot(data=df, x='연도', y='전체산업수출금액(백만불)', label='전체 산업', ax=ax2, color='#FF6347', linewidth=2)
-        sns.lineplot(data=df, x='연도', y='섬유산업수출금액(백만불)', label='섬유 산업', ax=ax2, color='#8A2BE2', linewidth=2)
+        sns.lineplot(data=df, x='연도', y='섬유산업수출금액(백만불)', label='섬유 산업', ax=ax2, color='#8A2BE2', linewidth=3)
         plt.fill_between(df['연도'], df['섬유산업수출금액(백만불)'], color='#8A2BE2', alpha=0.1)
         
         # 비교 그래프에도 폰트 적용

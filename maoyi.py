@@ -4,27 +4,26 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import datetime
-import matplotlib.font_manager as fm
 import os
 
-# 1. 한글 폰트 및 그래프 설정
+# 1. [핵심] 한글 폰트 및 그래프 설정 (서버 환경 대응)
 def set_korean_font():
-    # 1. 시스템에 설치된 폰트 확인
-    # 리눅스(Streamlit Cloud) 환경인 경우
+    # 리눅스(Streamlit Cloud) 환경인 경우 나눔고딕 설정
     if os.name == 'posix':
         plt.rc('font', family='NanumGothic')
-    # 윈도우 환경인 경우
+    # 윈도우 환경인 경우 맑은 고딕 설정
     elif os.name == 'nt':
         plt.rc('font', family='Malgun Gothic')
     
     # 마이너스 기호 깨짐 방지
     plt.rcParams['axes.unicode_minus'] = False
+
 set_korean_font()
 
-# 2. 페이지 설정 (브라우저 탭 제목과 레이아웃)
+# 2. 페이지 설정
 st.set_page_config(page_title="섬유산업 대시보드", page_icon="🧵", layout="wide")
 
-# 3. 커스텀 CSS (카드 디자인 적용)
+# 3. 커스텀 CSS (카드 디자인)
 st.markdown("""
     <style>
     .main-card {
@@ -42,21 +41,19 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 메인 타이틀 ---
+# 메인 타이틀
 st.title("🧵 대한민국 섬유산업 수출입 동향 분석기")
 st.markdown("전체 산업 대비 섬유산업의 성장과 변화를 한눈에 확인해 보세요!")
-st.write("") # 간격 조절
+st.write("") 
 
 # -----------------------------------------------------------------------------
 
-# 파일명 (업로드하신 파일명과 일치해야 합니다)
 file_path = "산업통상부_섬유산업 수출입 현황_20241231.csv"
 
 try:
     # 4. 데이터 불러오기
     df = pd.read_csv(file_path, encoding='cp949')
     
-    # 최신 데이터 추출
     latest_data = df.iloc[-1]
     column_names = df.columns.drop('연도').tolist()
 
@@ -67,15 +64,15 @@ try:
         selected_col = st.selectbox("데이터 항목 선택", column_names, index=5)
         
         st.divider()
-        st.write("💡 아래 체크박스를 누르면 전체 산업과의 비교 그래프가 나타납니다.")
+        st.write("💡 아래 체크박스를 누르면 비교 그래프가 나타납니다.")
         show_compare = st.checkbox("전체 산업과 비교하기")
 
-    # --- 6. 상단 요약 카드 (환율 사이트 느낌 탈출!) ---
+    # --- 6. 상단 요약 카드 ---
     col1, col2, col3 = st.columns(3)
 
     with col1:
         delta_val = latest_data['섬유산업수출증감(전년대비_퍼센트)']
-        delta_color = "#FF4B4B" if delta_val > 0 else "#1C83E1" # 상승 빨강, 하락 파랑
+        delta_color = "#FF4B4B" if delta_val > 0 else "#1C83E1"
         st.markdown(f"""
             <div class="main-card">
                 <div class="card-title">🧶 섬유 수출액</div>
@@ -110,13 +107,15 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-    # --- 7. 메인 그래프 ---
+    # --- 7. 메인 그래프 (폰트 설정 유지) ---
     st.subheader(f"📈 {selected_col} 추이 분석")
     
-    sns.set_theme(style="whitegrid", font="Malgun Gothic")
+    # 서버 환경에 맞는 폰트 이름을 명시적으로 지정
+    current_font = 'NanumGothic' if os.name == 'posix' else 'Malgun Gothic'
+    sns.set_theme(style="whitegrid", font=current_font)
+    
     fig, ax = plt.subplots(figsize=(12, 5))
     
-    # 선 그래프 디자인
     sns.lineplot(data=df, x='연도', y=selected_col, ax=ax, marker='o', 
                  color='#8A2BE2', linewidth=2.5, markersize=8)
     
@@ -126,7 +125,7 @@ try:
     
     st.pyplot(fig)
 
-    # 8. 비교 그래프 (사이드바 체크박스 연동)
+    # 8. 비교 그래프
     if show_compare:
         st.divider()
         st.subheader("📊 전체 산업 vs 섬유산업 수출 규모 비교")
@@ -135,7 +134,7 @@ try:
         sns.lineplot(data=df, x='연도', y='전체산업수출금액(백만불)', label='전체 산업', ax=ax2, color='#A9A9A9', alpha=0.7)
         sns.lineplot(data=df, x='연도', y='섬유산업수출금액(백만불)', label='섬유 산업', ax=ax2, color='#8A2BE2', linewidth=3)
         
-        plt.fill_between(df['연도'], df['섬유산업수출금액(백만불)'], color='#8A2BE2', alpha=0.1) # 아래 영역 채우기
+        plt.fill_between(df['연도'], df['섬유산업수출금액(백만불)'], color='#8A2BE2', alpha=0.1) 
         plt.legend()
         st.pyplot(fig2)
 
@@ -146,7 +145,6 @@ try:
 except FileNotFoundError:
     st.error(f"❌ '{file_path}' 파일을 찾을 수 없습니다.")
 except Exception as e:
-    st.error(f"❌ 예상치 못한 오류가 발생했습니다: {e}")
+    st.error(f"❌ 오류 발생: {e}")
 
-# 하단 캡션
 st.caption(f"최종 업데이트: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | 데이터 출처: 산업통상자원부")

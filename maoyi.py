@@ -4,10 +4,22 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import datetime
+import matplotlib.font_manager as fm
+import os
 
 # 1. 한글 폰트 및 그래프 설정
-plt.rcParams['font.family'] = 'Malgun Gothic'
-plt.rcParams['axes.unicode_minus'] = False
+def set_korean_font():
+    # 1. 시스템에 설치된 폰트 확인
+    # 리눅스(Streamlit Cloud) 환경인 경우
+    if os.name == 'posix':
+        plt.rc('font', family='NanumGothic')
+    # 윈도우 환경인 경우
+    elif os.name == 'nt':
+        plt.rc('font', family='Malgun Gothic')
+    
+    # 마이너스 기호 깨짐 방지
+    plt.rcParams['axes.unicode_minus'] = False
+set_korean_font()
 
 # 2. 페이지 설정 (브라우저 탭 제목과 레이아웃)
 st.set_page_config(page_title="섬유산업 대시보드", page_icon="🧵", layout="wide")

@@ -7,25 +7,29 @@ import datetime
 import os
 import matplotlib.font_manager as fm
 
-# 1. [완벽 해결] 폰트 파일 직접 로드 로직
-@st.cache_resource # 폰트를 매번 로드하면 느려지므로 캐싱합니다.
-def load_custom_font():
-    # 현재 파일(maoyi.py)이 있는 폴더 경로
-    current_path = os.path.dirname(__file__)
-    # 업로드한 폰트 파일 경로 (파일명 확인 필수!)
-    font_path = os.path.join(current_path, 'malgun.ttf')
+# 1. 한글 폰트 설정 (더 강력한 로직)
+def set_korean_font():
+    # Streamlit Cloud(Linux) 환경
+    if os.name == 'posix':
+        # 리눅스 서버에 설치된 나눔고딕 경로를 직접 지정하여 폰트 매니저에 등록
+        font_path = '/usr/share/fonts/truetype/nanum/NanumGothic.ttf'
+        if os.path.exists(font_path):
+            fe = fm.FontEntry(fname=font_path, name='NanumGothic')
+            fm.fontManager.ttflist.insert(0, fe)
+            plt.rc('font', family='NanumGothic')
+        else:
+            # 경로에 없을 경우 시스템 폰트에서 검색
+            plt.rc('font', family='NanumGothic')
+            
+    # Windows 환경
+    elif os.name == 'nt':
+        plt.rc('font', family='Malgun Gothic')
     
-    if os.path.exists(font_path):
-        # 폰트 속성 설정
-        prop = fm.FontProperties(fname=font_path)
-        plt.rc('font', family=prop.get_name())
-        plt.rcParams['axes.unicode_minus'] = False
-        return prop.get_name()
-    else:
-        # 폰트 파일이 없을 경우 기본 설정 유지
-        return None
+    # 공통 설정
+    plt.rcParams['axes.unicode_minus'] = False
+    plt.rcParams['font.size'] = 10
 
-font_name = load_custom_font()
+set_korean_font()
 
 # 2. 페이지 설정
 st.set_page_config(page_title="섬유산업 대시보드", page_icon="🧵", layout="wide")
@@ -49,6 +53,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🧵 대한민국 섬유산업 수출입 동향 분석기")
+st.markdown("전체 산업 대비 섬유산업의 성장과 변화를 한눈에 확인해 보세요!")
 
 # -----------------------------------------------------------------------------
 
@@ -59,39 +64,74 @@ try:
     latest_data = df.iloc[-1]
     column_names = df.columns.drop('연도').tolist()
 
+    # --- 5. 사이드바 ---
     with st.sidebar:
         st.header("⚙️ 분석 설정")
         selected_col = st.selectbox("데이터 항목 선택", column_names, index=5)
+        st.divider()
         show_compare = st.checkbox("전체 산업과 비교하기")
 
-    # 상단 요약 카드 (중략 - 이전과 동일)
+    # --- 6. 상단 요약 카드 ---
     col1, col2, col3 = st.columns(3)
-    # ... (생략된 요약 카드 로직은 동일하게 유지)
+    
+    for col, title, val_key, delta_key, unit in zip(
+        [col1, col2, col3], 
+        ["🧶 섬유 수출액", "📉 섬유 수입액", "💰 섬유 무역수지"],
+        ['섬유산업수출금액(백만불)', '섬유산업수입금액(백만불)', '섬유산업무역수지(백만불)'],
+        ['섬유산업수출증감(전년대비_퍼센트)', '섬유산업수입증감(전년대비_퍼센트)', None],
+        ["M$", "M$", "M$"]
+    ):
+        with col:
+            val = latest_data[val_key]
+            delta = latest_data[delta_key] if delta_key else None
+            color = "#FF4B4B" if delta and delta > 0 else "#1C83E1"
+            
+            st.markdown(f"""
+                <div class="main-card">
+                    <div class="card-title">{title}</div>
+                    <div class="card-value">{val:,.0f} {unit}</div>
+                    <div class="card-delta" style="color: {color if delta else '#666'};">
+                        {("▲ " + str(abs(delta)) + "%") if delta else ("비중: " + str(latest_data['섬유산업수출비중(전년대비_퍼센트)']) + "%")}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
 
-    # 7. 메인 그래프 (폰트 강제 적용)
+    # --- 7. 메인 그래프 ---
     st.subheader(f"📈 {selected_col} 추이 분석")
     
-    # Seaborn 테마 설정 후 폰트 재설정
-    sns.set_theme(style="whitegrid")
-    if font_name:
-        plt.rc('font', family=font_name)
+    # 서버 환경에 맞는 폰트명 결정
+    target_font = 'NanumGothic' if os.name == 'posix' else 'Malgun Gothic'
+    sns.set_theme(style="whitegrid", font=target_font)
     
     fig, ax = plt.subplots(figsize=(12, 5))
     sns.lineplot(data=df, x='연도', y=selected_col, ax=ax, marker='o', color='#8A2BE2', linewidth=2.5)
     
-    ax.set_title(f"연도별 {selected_col} 변화 추이", fontsize=16, pad=20, fontweight='bold')
-    ax.set_xlabel("연도")
-    ax.set_ylabel("수치")
+    # 폰트 강제 재설정 (개별 요소)
+    ax.set_title(f"연도별 {selected_col} 변화 추이", fontsize=16, pad=20, fontweight='bold', fontfamily=target_font)
+    ax.set_xlabel("연도", fontfamily=target_font)
+    ax.set_ylabel("수치", fontfamily=target_font)
     
     st.pyplot(fig)
 
+    # 8. 비교 그래프
     if show_compare:
         st.divider()
         st.subheader("📊 전체 산업 vs 섬유산업 수출 규모 비교")
         fig2, ax2 = plt.subplots(figsize=(12, 5))
         sns.lineplot(data=df, x='연도', y='전체산업수출금액(백만불)', label='전체 산업', ax=ax2, color='#A9A9A9')
         sns.lineplot(data=df, x='연도', y='섬유산업수출금액(백만불)', label='섬유 산업', ax=ax2, color='#8A2BE2', linewidth=3)
+        plt.fill_between(df['연도'], df['섬유산업수출금액(백만불)'], color='#8A2BE2', alpha=0.1)
+        
+        # 비교 그래프에도 폰트 적용
+        ax2.set_title("전체 산업 vs 섬유 산업", fontfamily=target_font)
+        plt.legend(prop={'family': target_font})
+        
         st.pyplot(fig2)
+
+    with st.expander("📄 원본 데이터 확인하기"):
+        st.dataframe(df.sort_values('연도', ascending=False), use_container_width=True)
 
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
+
+st.caption(f"최종 업데이트: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

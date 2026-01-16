@@ -119,7 +119,7 @@ try:
         st.subheader("📊 전체 산업 vs 섬유산업 수출 규모 비교")
         fig2, ax2 = plt.subplots(figsize=(12, 5))
         sns.lineplot(data=df, x='연도', y='전체산업수출금액(백만불)', label='전체 산업', ax=ax2, color='#FF6347', linewidth=2)
-        sns.lineplot(data=df, x='연도', y='섬유산업수출금액(백만불)', label='섬유 산업', ax=ax2, color='#8A2BE2', linewidth=3)
+        sns.lineplot(data=df, x='연도', y='섬유산업수출금액(백만불)', label='섬유 산업', ax=ax2, color='#8A2BE2', linewidth=2)
         plt.fill_between(df['연도'], df['섬유산업수출금액(백만불)'], color='#8A2BE2', alpha=0.1)
         
         # 비교 그래프에도 폰트 적용
